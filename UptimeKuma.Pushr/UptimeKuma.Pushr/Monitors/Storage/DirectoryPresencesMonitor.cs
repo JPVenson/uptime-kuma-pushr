@@ -3,33 +3,33 @@ using UptimeKuma.Pushr.Services.TaskStore;
 using UptimeKuma.Pushr.TaskRunner;
 using UptimeKuma.Pushr.TaskRunner.UiOptions;
 
-namespace UptimeKuma.Pushr.Monitors.Process;
+namespace UptimeKuma.Pushr.Monitors.Storage;
 
 [TransientService(typeof(IReportableMonitor))]
-public class FilePresencesMonitor : PullMonitorBase
+public class DirectoryPresencesMonitor : PullMonitorBase
 {
-	public FilePresencesMonitor() : base("FileExistMonitor.V1", "File Exists", "Checks for a file to exist.")
+	public DirectoryPresencesMonitor() : base("DirectoryExistMonitor.V1", "Directory Exists", "Checks for a Directory to exist.")
 	{
 	}
 
-	public const string FILE_NAME_OPTION_KEY = "FileName";
+	public const string DIRECTORY_NAME_OPTION_KEY = "DirectoryPath";
 
 	protected override IEnumerable<IUiOption> GetCustomOptions()
 	{
 		yield return new StringUiOption()
 		{
 			Required = true,
-			Key = FILE_NAME_OPTION_KEY,
-			Name = "File name",
-			Description = "The path of the file to search for",
+			Key = DIRECTORY_NAME_OPTION_KEY,
+			Name = "Directory name",
+			Description = "The path of the Directory to search for",
 		};
 	}
 
 	public override ValueTask<IStatusMessage> PullStatusAsync(MonitorData options, CancellationToken cancellationToken)
 	{
-		var filename = options.Data[FILE_NAME_OPTION_KEY];
+		var filename = options.Data[DIRECTORY_NAME_OPTION_KEY];
 
-		if (File.Exists(filename))
+		if (Directory.Exists(filename))
 		{
 			return new ValueTask<IStatusMessage>(StatusMessage.Ok("found", "1"));
 		}

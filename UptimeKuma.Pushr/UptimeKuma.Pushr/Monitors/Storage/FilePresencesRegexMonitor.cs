@@ -4,7 +4,7 @@ using UptimeKuma.Pushr.Services.TaskStore;
 using UptimeKuma.Pushr.TaskRunner;
 using UptimeKuma.Pushr.TaskRunner.UiOptions;
 
-namespace UptimeKuma.Pushr.Monitors.Process;
+namespace UptimeKuma.Pushr.Monitors.Storage;
 
 [TransientService(typeof(IReportableMonitor))]
 public class FilePresencesRegexMonitor : PullMonitorBase
