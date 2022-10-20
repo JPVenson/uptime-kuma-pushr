@@ -209,7 +209,9 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi
 			foreach (var yieldTransformation in ConsoleStylesheet.YieldTransformations())
 			{
 				format = format.Replace($"<{yieldTransformation.Item1}>", "")
-					.Replace($"</{yieldTransformation.Item1}>", "");
+					.Replace($"</{yieldTransformation.Item1}>", "")
+					.Replace($"<{yieldTransformation.Item1.ToLower()}>", "")
+					.Replace($"</{yieldTransformation.Item1.ToLower()}>", "");
 			}
 
 			Console.Write(format);

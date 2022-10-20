@@ -5,6 +5,13 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
+    <Authors>Venson</Authors>
+    <Description>A relay for monitors with Kuma-Uptime</Description>
+    <Copyright>Jean-Pierre Bachmann</Copyright>
+    <PackageProjectUrl>https://github.com/JPVenson/uptime-kuma-pushr</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/JPVenson/uptime-kuma-pushr</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>uptime-kuma</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
