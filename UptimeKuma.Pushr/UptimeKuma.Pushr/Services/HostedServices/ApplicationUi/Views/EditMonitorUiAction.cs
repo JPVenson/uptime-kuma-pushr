@@ -14,7 +14,7 @@ public class EditMonitorUiAction : UiAction
 
 	public EditMonitorUiAction(
 		MonitorData monitorData,
-		IMonitorStoreService monitorStoreService, 
+		IMonitorStoreService monitorStoreService,
 		ITaskStoreService taskStoreService) : base("E", "Edit Monitor")
 	{
 		_monitorData = monitorData;
@@ -70,7 +70,8 @@ public class EditMonitorUiAction : UiAction
 			{
 				Title = "Set new value for " + uiOption.Name,
 				Description = uiOption.Description,
-				Default = uiOption.Default
+				Default = uiOption.Default,
+				Shortcuts = uiOption.SuggestedValues ?? new Dictionary<string, string>()
 			};
 
 			do

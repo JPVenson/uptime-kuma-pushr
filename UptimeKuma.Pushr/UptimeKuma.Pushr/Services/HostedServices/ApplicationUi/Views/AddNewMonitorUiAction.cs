@@ -38,10 +38,13 @@ public class AddNewMonitorUiAction : UiAction
 
 		foreach (var uiOption in fields)
 		{
-			var input = new InputPromtView();
-			input.Title = uiOption.Name;
-			input.Description = uiOption.Description;
-			input.Default = uiOption.Default;
+			var input = new InputPromtView
+			{
+				Title = uiOption.Name,
+				Description = uiOption.Description,
+				Default = uiOption.Default,
+				Shortcuts = uiOption.SuggestedValues ?? new Dictionary<string, string>()
+			};
 
 			do
 			{

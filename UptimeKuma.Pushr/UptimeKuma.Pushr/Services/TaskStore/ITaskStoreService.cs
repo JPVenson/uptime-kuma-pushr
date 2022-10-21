@@ -21,7 +21,7 @@ public class MonitorData
 
 	public TimeSpan Interval { get; set; }
 	public string PushUrl { get; set; }
-	public TimeSpan Timeout { get; set; }
+	public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(15);
 
 	public bool Disabled { get; set; }
 

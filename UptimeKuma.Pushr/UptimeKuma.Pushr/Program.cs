@@ -11,17 +11,22 @@ var defaultBuilder = Host.CreateDefaultBuilder();
 
 
 var hostBuilder = defaultBuilder
-	.ConfigureAppConfiguration(e => e.AddCommandLine(args)
-		.AddEnvironmentVariables()
-		.AddJsonFile("appsettings.json", true))
-	.ConfigureServices((context, e) => 
+	.ConfigureAppConfiguration(e =>
+	{
+		e.AddCommandLine(args)
+			.AddEnvironmentVariables()
+			.AddJsonFile("appsettings.json", true);
+	})
+	.ConfigureServices((context, e) =>
+	{
 		e.UseServiceDiscovery()
-		.FromAssembly(typeof(Program).Assembly)
-		.DiscoverOptions(context.Configuration)
-		.FromAssembly(typeof(Program).Assembly)
-		.LocateServices()
-		.AddHostedService<TaskRunnerService>()
-		.AddHostedService<KumaPushClientService>()
-		.AddHostedService<ApplicationUiService>());
+			.FromAssembly(typeof(Program).Assembly)
+			.DiscoverOptions(context.Configuration)
+			.FromAssembly(typeof(Program).Assembly)
+			.LocateServices()
+			.AddHostedService<TaskRunnerService>()
+			.AddHostedService<KumaPushClientService>()
+			.AddHostedService<ApplicationUiService>();
+	});
 
 await hostBuilder.RunConsoleAsync(options => options.SuppressStatusMessages = true);
