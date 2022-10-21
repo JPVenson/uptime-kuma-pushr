@@ -1,21 +1,27 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Colorful;
+using Microsoft.Extensions.Hosting;
 using UptimeKuma.Pushr.Services.ActivatorServ;
 using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
+using UptimeKuma.Pushr.Services.MonitorStore;
 using UptimeKuma.Pushr.Services.TaskStore;
+using Console = Colorful.Console;
 
 namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views
 {
 	public class MainView : ViewBase
 	{
 		private readonly ITaskStoreService _taskStoreService;
+		private readonly IMonitorStoreService _monitorStoreService;
 		private readonly ActivatorService _activatorService;
 		private readonly IHostApplicationLifetime _hostApplicationLifetime;
 
 		public MainView(ITaskStoreService taskStoreService,
+			IMonitorStoreService monitorStoreService,
 			ActivatorService activatorService,
 			IHostApplicationLifetime hostApplicationLifetime)
 		{
 			_taskStoreService = taskStoreService;
+			_monitorStoreService = monitorStoreService;
 			_activatorService = activatorService;
 			_hostApplicationLifetime = hostApplicationLifetime;
 			Title = "Main Menu";
@@ -25,7 +31,10 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views
 		private IEnumerable<UiAction> SetupUiActions()
 		{
 			yield return _activatorService.ActivateType<AddNewMonitorUiAction>();
-			yield return new BackUiAction(BackRequest);
+			yield return new BackUiAction(BackRequest)
+			{
+				Description = "Quits the App",
+			};
 		}
 
 		private ListView _listOfRunningTasks;
@@ -40,11 +49,15 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views
 				Title = "Running Monitors",
 				Items = _taskStoreService.Tasks.ToNumberdDisplayList(e =>
 				{
+					var title = e.Title;
 					if (e.Disabled)
 					{
-						return e.Title + " (Disabled)";
+						title += " <warning>(Disabled)</warning>";
 					}
-					return e.Title;
+
+					var monitor = _monitorStoreService.FindTask(e.ReportableMonitorId);
+					title += $"\n<info>{monitor.Name}</info>";
+					return title;
 				})
 			};
 			_listOfRunningTasks.Render(viewRenderer);
@@ -54,13 +67,16 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views
 			_mainViewActions = new ListView()
 			{
 				Title = "Actions",
-				Items = _uiActions.ToDictionary(e => e.ActionName, e => e.ActionTitle)
+				Items = _uiActions.ToDictionary(e => e.ActionName, e => $"{e.ActionTitle}\n{e.ActionDescription ?? e.Description}")
 			};
 			_mainViewActions.Render(viewRenderer);
 		}
 
 		public override async Task Display(bool embedded)
 		{
+			var concreteValue = new Figlet(FigletFont.Default).ToAscii("Kuma Pusr").ConcreteValue;
+			System.Console.WriteLine(concreteValue);
+
 			await base.Display(embedded);
 			while (!BackRequest.IsCancellationRequested)
 			{

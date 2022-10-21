@@ -19,9 +19,15 @@ public class MonitorStoreService : IMonitorStoreService
 	{
 		return (_monitors ??= _serviceProvider.GetServices(typeof(IReportableMonitor)).OfType<IReportableMonitor>().ToArray());
 	}
+
+	public IReportableMonitor FindTask(string id)
+	{
+		return (GetTasks()).FirstOrDefault(e => e.Id == id);
+	}
 }
 
 public interface IMonitorStoreService
 {
 	IEnumerable<IReportableMonitor> GetTasks();
+	IReportableMonitor FindTask(string id);
 }

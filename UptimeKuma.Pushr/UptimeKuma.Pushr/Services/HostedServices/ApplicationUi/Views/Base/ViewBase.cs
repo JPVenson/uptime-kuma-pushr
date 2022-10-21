@@ -16,11 +16,12 @@ public abstract class ViewBase : IView
 
 	public virtual async Task Display(bool embedded)
 	{
+		var ui = new StringBuilderInterlaced();
 		if (!embedded)
 		{
 			Console.Title = "Uptime-Kuma Pusr - " + Title;
+			ui.AppendLine().AppendLine();
 		}
-		var ui = new StringBuilderInterlaced();
 		Render(ui);
 		ui.WriteToConsole();
 	}
