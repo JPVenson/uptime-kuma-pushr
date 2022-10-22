@@ -33,7 +33,9 @@ public class NamedProcessMonitor : PullMonitorBase
 		};
 	}
 
-	public override ValueTask<IStatusMessage> PullStatusAsync(MonitorData options, CancellationToken cancellationToken)
+	public override ValueTask<IStatusMessage> PullStatusAsync(MonitorData options, 
+		CancellationToken cancellationToken,
+		StateInfo state)
 	{
 		var processName = options.Data[PROCESS_NAME_OPTION_KEY];
 		var processesByName = System.Diagnostics.Process.GetProcessesByName(processName);

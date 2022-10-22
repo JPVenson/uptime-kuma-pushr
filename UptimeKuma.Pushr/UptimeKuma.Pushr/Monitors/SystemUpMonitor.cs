@@ -11,7 +11,9 @@ public class SystemUpMonitor : PullMonitorBase
 	{
 	}
 
-	public override ValueTask<IStatusMessage> PullStatusAsync(MonitorData options, CancellationToken cancellationToken)
+	public override ValueTask<IStatusMessage> PullStatusAsync(MonitorData options, 
+		CancellationToken cancellationToken,
+		StateInfo state)
 	{
 		return new ValueTask<IStatusMessage>(StatusMessage.Ok("up", "0"));
 	}

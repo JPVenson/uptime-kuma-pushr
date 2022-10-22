@@ -25,7 +25,9 @@ public class DirectoryPresencesMonitor : PullMonitorBase
 		};
 	}
 
-	public override ValueTask<IStatusMessage> PullStatusAsync(MonitorData options, CancellationToken cancellationToken)
+	public override ValueTask<IStatusMessage> PullStatusAsync(MonitorData options,
+		CancellationToken cancellationToken,
+		StateInfo state)
 	{
 		var filename = options.Data[DIRECTORY_NAME_OPTION_KEY];
 

@@ -1,4 +1,6 @@
 ﻿using ServiceLocator.Attributes;
+using UptimeKuma.Pushr.Services.TaskStore;
+using UptimeKuma.Pushr.TaskRunner;
 
 namespace UptimeKuma.Pushr.Services.HostedServices.TaskRunner;
 
@@ -12,6 +14,10 @@ public class TaskRunnerNotifyService : ITaskRunnerNotifyService
 	}
 
 	public AutoResetEvent RefreshDataEvent { get; private set; }
+	public IEnumerable<(MonitorData Data, StateInfo LastState)> States { get; set; }
+
+
+	public event EventHandler<MonitorData> StateHasChanged;
 
 	public void SignalRefresh()
 	{
@@ -20,5 +26,10 @@ public class TaskRunnerNotifyService : ITaskRunnerNotifyService
 
 	public void RefreshSignal()
 	{
+	}
+
+	public void SignalTaskStateChange(MonitorData data)
+	{
+		StateHasChanged?.Invoke(this, data);
 	}
 }

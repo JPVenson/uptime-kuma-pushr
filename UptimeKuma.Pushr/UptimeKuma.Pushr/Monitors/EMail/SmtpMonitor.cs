@@ -61,7 +61,9 @@ namespace UptimeKuma.Pushr.Monitors.EMail
 			};
 		}
 
-		public override async ValueTask<IStatusMessage> PullStatusAsync(MonitorData options, CancellationToken cancellationToken)
+		public override async ValueTask<IStatusMessage> PullStatusAsync(MonitorData options, 
+			CancellationToken cancellationToken,
+			StateInfo state)
 		{
 			var hostname = options.Data[HOSTNAME_OPTION_KEY];
 			var port = int.Parse(options.Data[PORT_OPTION_KEY]);

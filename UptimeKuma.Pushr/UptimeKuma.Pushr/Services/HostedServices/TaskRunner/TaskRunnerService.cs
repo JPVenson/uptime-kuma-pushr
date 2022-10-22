@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Cyotek.Collections.Generic;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using UptimeKuma.Pushr.Services.HostedServices.StatusClient;
 using UptimeKuma.Pushr.Services.HostedServices.TaskRunner.Options;
@@ -33,6 +35,7 @@ public class TaskRunnerService : BackgroundService
 		_runnerNotifyService = runnerNotifyService;
 
 		_hostRunData = new List<HostRunModel>();
+		_runnerNotifyService.States = _hostRunData.Select(f => (f.Data, f.LastState));
 	}
 
 	private List<HostRunModel> _hostRunData;
@@ -50,7 +53,7 @@ public class TaskRunnerService : BackgroundService
 	{
 		while (!_hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
 		{
-			RefreshHostRunData();
+			await RefreshHostRunData();
 			var nextExecution = EvaluateNextRuntimes();
 			if (nextExecution.TotalSeconds > 0)
 			{
@@ -65,7 +68,7 @@ public class TaskRunnerService : BackgroundService
 				}
 			}
 
-			foreach (var value in GetExecutableTaskList().ToArray())
+			foreach (var value in GetPullTaskList().ToArray())
 			{
 				IStatusMessage statusMessage;
 				try
@@ -83,62 +86,172 @@ public class TaskRunnerService : BackgroundService
 		}
 	}
 
-	private ValueTask<IStatusMessage> InvokeTask(HostRunModel data)
+	private async ValueTask<IStatusMessage> InvokeTask(HostRunModel hostRunModel)
 	{
 		//future implementation of syntactically different tasks
-		if (data.Monitor is IPullMonitor pullTask)
+		if (hostRunModel.Monitor is IPullMonitor pullTask)
 		{
-			var timeoutToken = new CancellationTokenSource(data.Data.Timeout);
+			var timeoutToken = new CancellationTokenSource(hostRunModel.Data.Timeout);
 			var stopToken = CancellationTokenSource.CreateLinkedTokenSource(timeoutToken.Token,
 				_hostApplicationLifetime.ApplicationStopping);
-			return pullTask.PullStatusAsync(data.Data, stopToken.Token);
+			var statusMessage = await pullTask.PullStatusAsync(hostRunModel.Data, stopToken.Token, hostRunModel.LastState);
+			UpdateStateInfo(hostRunModel, hostRunModel.LastState.Copy());
+			return statusMessage;
 		}
 
 		throw new NotSupportedException("The Task is of an unknown type and cannot be processed.");
 	}
 
-	private void RefreshHostRunData()
+	private async Task RefreshHostRunData()
 	{
 		_runnerNotifyService.RefreshSignal();
 		foreach (var monitorData in _taskStoreService.Tasks
 			         .Where(e => !_hostRunData.Select(f => f.Data.Id).Contains(e.Id)))
 		{
-			var monitor = _monitorStoreService.GetTasks()
+			var monitor = _monitorStoreService
+				.GetTasks()
 				.FirstOrDefault(e => e.Id == monitorData.ReportableMonitorId);
-			_hostRunData.Add(new HostRunModel()
+			var hostRunModel = new HostRunModel()
 			{
 				Data = monitorData,
 				Monitor = monitor
-			});
+			};
+
+			hostRunModel.LastState = new StateInfo(CreateLoggerFactory(hostRunModel));
+			_hostRunData.Add(hostRunModel);
+
+			if (monitor is IPushMonitor pushMonitor)
+			{
+				hostRunModel.PushState = await pushMonitor.StartPushState(monitorData,
+					_hostApplicationLifetime.ApplicationStopping, state =>
+					{
+						UpdateStateInfo(hostRunModel, state);
+					});
+			}
 		}
 
 		foreach (var monitorData in _hostRunData
 			         .Where(e => !_taskStoreService.Tasks.Select(f => f.Id).Contains(e.Data.Id)).ToArray())
 		{
 			_hostRunData.Remove(monitorData);
+
+			if (monitorData.Monitor is IPushMonitor pushMonitor)
+			{
+				await pushMonitor.StopPushState(monitorData.PushState);
+			}
 		}
 	}
 
-	private IEnumerable<HostRunModel> GetExecutableTaskList()
+	private ILoggerFactory CreateLoggerFactory(HostRunModel hostRunModel)
+	{
+		return new LoggerFactory(new ILoggerProvider[]
+		{
+			new CachedLoggingProvider(hostRunModel)
+		});
+	}
+
+	private void UpdateStateInfo(HostRunModel hostRunModel, StateInfo state)
+	{
+		if (hostRunModel.LastState.State != state.State)
+		{
+			_runnerNotifyService.SignalTaskStateChange(hostRunModel.Data);
+		}
+
+		hostRunModel.LastState = state;
+	}
+
+	private IEnumerable<HostRunModel> GetPullTaskList()
 	{
 		var time = DateTime.Now;
-		return _hostRunData
-			.Where(e => !e.Data.Disabled)
+		return FilterMonitors(_hostRunData)
 			.Where(e => e.LastExecution is null || e.LastExecution.Value + e.Data.Interval < time);
+	}
+
+	private IEnumerable<HostRunModel> FilterMonitors(IEnumerable<HostRunModel> source)
+	{
+		return source
+			.Where(e => e.Monitor is IPullMonitor)
+			.Where(e => !e.Data.Disabled)
+			.Where(e => e.LastState.State != MonitorState.Broken);
 	}
 
 	private TimeSpan EvaluateNextRuntimes()
 	{
-		if (_hostRunData.All(e => e.Data.Disabled))
+		if (_hostRunData
+		    .Where(e => e.Monitor is IPullMonitor)
+		    .All(e => e.Data.Disabled))
 		{
 			return TimeSpan.FromHours(1);
 		}
 
 		var time = DateTime.Now;
 		return
-			_hostRunData
-				.Where(e => !e.Data.Disabled)
+			FilterMonitors(_hostRunData)
 				.Select(f => (f.LastExecution ?? (time - f.Data.Interval)) + f.Data.Interval)
 				.Max() - time;
 	}
+}
+
+internal class CachedLoggingProvider : ILoggerProvider
+{
+	public CachedLoggingProvider(HostRunModel hostRunModel)
+	{
+		Logs = new CircularBuffer<LoggingMessage>(35, true);
+		hostRunModel.LoggingProvider = this;
+	}
+
+	public void Dispose()
+	{
+		Logs.Clear();
+	}
+
+	public CircularBuffer<LoggingMessage> Logs { get; set; }
+
+	public ILogger CreateLogger(string categoryName)
+	{
+		return new CachedLogger(this, categoryName);
+	}
+
+	private class CachedLogger : ILogger
+	{
+		private readonly CachedLoggingProvider _cachedLoggingProvider;
+		private string _category;
+
+		public CachedLogger(CachedLoggingProvider cachedLoggingProvider, string category)
+		{
+			_cachedLoggingProvider = cachedLoggingProvider;
+			_category = category;
+		}
+
+		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+		{
+			_cachedLoggingProvider.Logs.Put(new LoggingMessage()
+			{
+				Message = formatter(state, exception),
+				EventId = eventId,
+				Exception = exception,
+				LogLevel = logLevel,
+				Category = _category
+			});
+		}
+
+		public bool IsEnabled(LogLevel logLevel)
+		{
+			return true;
+		}
+
+		public IDisposable BeginScope<TState>(TState state)
+		{
+			return null;
+		}
+	}
+}
+
+internal class LoggingMessage
+{
+	public LogLevel LogLevel { get; set; }
+	public string Message { get; set; }
+	public EventId EventId { get; set; }
+	public Exception Exception { get; set; }
+	public string Category { get; set; }
 }

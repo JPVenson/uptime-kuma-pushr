@@ -34,7 +34,9 @@ public class FilePresencesRegexMonitor : PullMonitorBase
 		};
 	}
 
-	public override ValueTask<IStatusMessage> PullStatusAsync(MonitorData options, CancellationToken cancellationToken)
+	public override ValueTask<IStatusMessage> PullStatusAsync(MonitorData options,
+		CancellationToken cancellationToken,
+		StateInfo state)
 	{
 		var filename = options.Data[FILE_NAME_OPTION_KEY];
 		var regex = new Regex(options.Data[FILE_REGEX_OPTION_KEY]);

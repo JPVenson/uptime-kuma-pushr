@@ -25,7 +25,9 @@ public class FilePresencesMonitor : PullMonitorBase
 		};
 	}
 
-	public override ValueTask<IStatusMessage> PullStatusAsync(MonitorData options, CancellationToken cancellationToken)
+	public override ValueTask<IStatusMessage> PullStatusAsync(MonitorData options, 
+		CancellationToken cancellationToken,
+		StateInfo state)
 	{
 		var filename = options.Data[FILE_NAME_OPTION_KEY];
 

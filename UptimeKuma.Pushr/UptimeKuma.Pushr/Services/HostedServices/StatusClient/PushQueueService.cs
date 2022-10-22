@@ -20,6 +20,14 @@ public class PushQueueService : IPushQueueService
 		MessageQueue.Add(new MessageQueueItem(message, monitor, monitorData));
 	}
 
+	public Task<HttpResponseMessage> EnqueueMessageAsync(IStatusMessage message, IReportableMonitor monitor,
+		MonitorData monitorData)
+	{
+		var messageQueueItem = new MessageQueueItem(message, monitor, monitorData);
+		MessageQueue.Add(messageQueueItem);
+		return messageQueueItem.AwaitDelivery();
+	}
+
 	public IEnumerable<MessageQueueItem> GetConsumableEnumerable()
 	{
 		return MessageQueue.GetConsumingEnumerable();

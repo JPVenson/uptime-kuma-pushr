@@ -1,9 +1,12 @@
-﻿using Colorful;
+﻿using System.Security.Cryptography;
+using Colorful;
 using Microsoft.Extensions.Hosting;
 using UptimeKuma.Pushr.Services.ActivatorServ;
 using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
+using UptimeKuma.Pushr.Services.HostedServices.TaskRunner;
 using UptimeKuma.Pushr.Services.MonitorStore;
 using UptimeKuma.Pushr.Services.TaskStore;
+using UptimeKuma.Pushr.TaskRunner;
 using Console = Colorful.Console;
 
 namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views
@@ -14,23 +17,45 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views
 		private readonly IMonitorStoreService _monitorStoreService;
 		private readonly ActivatorService _activatorService;
 		private readonly IHostApplicationLifetime _hostApplicationLifetime;
+		private readonly ITaskRunnerNotifyService _taskRunnerNotifyService;
 
 		public MainView(ITaskStoreService taskStoreService,
 			IMonitorStoreService monitorStoreService,
 			ActivatorService activatorService,
-			IHostApplicationLifetime hostApplicationLifetime)
+			IHostApplicationLifetime hostApplicationLifetime,
+			ITaskRunnerNotifyService taskRunnerNotifyService)
 		{
 			_taskStoreService = taskStoreService;
 			_monitorStoreService = monitorStoreService;
 			_activatorService = activatorService;
 			_hostApplicationLifetime = hostApplicationLifetime;
+			_taskRunnerNotifyService = taskRunnerNotifyService;
+			_taskRunnerNotifyService.StateHasChanged += _taskRunnerNotifyService_StateHasChanged;
 			Title = "Main Menu";
 			_uiActions = SetupUiActions().ToArray();
+		}
+
+		private void _taskRunnerNotifyService_StateHasChanged(object sender, MonitorData e)
+		{
+			if (StateWindow != default)
+			{
+				var oldState = (Console.CursorLeft, Console.CursorTop);
+				Console.CursorLeft = StateWindow.CursorLeft;
+				Console.CursorTop = StateWindow.CursorTop;
+
+				var writer = new StringBuilderInterlaced();
+				writer.Append("<info>The state of one or more monitors has changed. Type r to refresh</info>");
+				writer.WriteToConsole();
+
+				Console.CursorLeft = oldState.CursorLeft;
+				Console.CursorTop = oldState.CursorTop;
+			}
 		}
 
 		private IEnumerable<UiAction> SetupUiActions()
 		{
 			yield return _activatorService.ActivateType<AddNewMonitorUiAction>();
+			yield return _activatorService.ActivateType<RefreshUiAction>();
 			yield return new BackUiAction(BackRequest)
 			{
 				Description = "Quits the App",
@@ -57,6 +82,13 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views
 
 					var monitor = _monitorStoreService.FindTask(e.ReportableMonitorId);
 					title += $"\n<info>{monitor.Name}</info>";
+					if (!e.Disabled)
+					{
+						title += "\nState: ";
+						var state = _taskRunnerNotifyService.States.FirstOrDefault(f => f.Data.Id == e.Id).LastState?.State 
+						            ?? MonitorState.Unknown;
+						title += BuildStateDisplay(state);
+					}
 					return title;
 				})
 			};
@@ -72,10 +104,32 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views
 			_mainViewActions.Render(viewRenderer);
 		}
 
+		public static string BuildStateDisplay(MonitorState state)
+		{
+			switch (state)
+			{
+				case MonitorState.Unknown:
+					return $"{MonitorState.Unknown}";
+					break;
+				case MonitorState.Running:
+					return $"<success>{MonitorState.Running}</success>";
+					break;
+				case MonitorState.Stopped:
+					return $"<warning>{MonitorState.Stopped}</warning>";
+					break;
+				case MonitorState.Broken:
+					return $"<error>{MonitorState.Broken}</error>";
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+
 		public override async Task Display(bool embedded)
 		{
 			var concreteValue = new Figlet(FigletFont.Default).ToAscii("Kuma Pusr").ConcreteValue;
 			System.Console.WriteLine(concreteValue);
+			StateWindow = (Console.CursorLeft, Console.CursorTop);
 
 			await base.Display(embedded);
 			while (!BackRequest.IsCancellationRequested)
@@ -96,14 +150,30 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views
 				}
 
 				var mainViewAction = _mainViewActions.SelectFrom(_uiActions, inputSelection.Result);
-				if (mainViewAction is not null)
+				if (mainViewAction is not null && mainViewAction is not BackUiAction)
 				{
 					await mainViewAction.Display(false);
 					await base.Display(embedded);
 				}
 			}
 
+			System.Console.WriteLine("Application will now shutdown...");
 			_hostApplicationLifetime.StopApplication();
+		}
+
+		public (int CursorLeft, int CursorTop) StateWindow { get; set; }
+	}
+
+	public class RefreshUiAction : UiAction
+	{
+		public RefreshUiAction() : base("R", "Refresh UI")
+		{
+			Description = "Redraws the Console UI";
+		}
+
+		public override void Render(StringBuilderInterlaced viewRenderer)
+		{
+
 		}
 	}
 }

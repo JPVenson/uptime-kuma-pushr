@@ -1,5 +1,9 @@
-﻿using System.Text;
-using Console = Colorful.Console;
+﻿using System.Drawing;
+using System.Linq.Expressions;
+using System.Text;
+using System.Text.RegularExpressions;
+using Colorful;
+using Console = System.Console;
 
 namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi
 {
@@ -205,18 +209,52 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi
 		{
 			var format = _source.ToString();
 			//quickfix this is only neede until Colorful Console fixes the Blue issue
+			//https://github.com/tomakita/Colorful.Console/issues/88
+			//foreach (var yieldTransformation in ConsoleStylesheet.YieldTransformations())
+			//{
+			//	format = format.Replace($"<{yieldTransformation.Item1}>", "")
+			//		.Replace($"</{yieldTransformation.Item1}>", "")
+			//		.Replace($"<{yieldTransformation.Item1.ToLower()}>", "")
+			//		.Replace($"</{yieldTransformation.Item1.ToLower()}>", "");
+			//}
 
-			foreach (var yieldTransformation in ConsoleStylesheet.YieldTransformations())
+			var colorList = new List<(string, ConsoleColor)>();
+
+			var targetPattern = $@"<(.*)>(.*?)<\/\1>";
+			var regex = new Regex(targetPattern, RegexOptions.IgnoreCase);
+			var transformations = ConsoleStylesheet.YieldTransformations().ToArray();
+
+			foreach (Match match in regex.Matches(format))
 			{
-				format = format.Replace($"<{yieldTransformation.Item1}>", "")
-					.Replace($"</{yieldTransformation.Item1}>", "")
-					.Replace($"<{yieldTransformation.Item1.ToLower()}>", "")
-					.Replace($"</{yieldTransformation.Item1.ToLower()}>", "");
+				var keyword = match.Groups[1].Value;
+				var innerText = match.Groups[2].Value;
+
+				var transformation =
+					transformations.FirstOrDefault(e => e.Item1.Equals(keyword, StringComparison.OrdinalIgnoreCase));
+				
+				format = format.Replace(match.Value, "{marker}");
+				if (transformation != default)
+				{
+					colorList.Add((innerText, transformation.Item2));
+				}
 			}
 
-			Console.Write(format);
+			var parts = format.Split("{marker}");
+			for (var index = 0; index < parts.Length; index++)
+			{
+				var part = parts[index];
+				Console.Write(part);
+				if (index < colorList.Count)
+				{
+					var colored = colorList[index];
+					var oldForground = Console.ForegroundColor;
+					Console.ForegroundColor = colored.Item2;
+					Console.Write(colored.Item1, colored.Item2);
+					Console.ForegroundColor = oldForground;
+				}
+			}
 		}
-		
+
 		/// <summary>
 		///     Returns a <see cref="System.String" /> that represents all text parts without any color
 		/// </summary>
@@ -227,7 +265,7 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi
 		{
 			return _source.ToString();
 		}
-		
+
 		/// <summary>
 		/// throws NotImplementedException
 		/// </summary>

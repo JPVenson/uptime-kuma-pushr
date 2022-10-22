@@ -14,7 +14,7 @@ public class KumaPushClientService : BackgroundService
 		_httpClients = new Dictionary<string, HttpClient>();
 	}
 
-	private IDictionary<string, HttpClient> _httpClients;
+	private readonly IDictionary<string, HttpClient> _httpClients;
 	
 	protected override Task ExecuteAsync(CancellationToken stoppingToken)
 	{
@@ -45,12 +45,13 @@ public class KumaPushClientService : BackgroundService
 			try
 			{
 				var httpResponseMessage = await client.GetAsync(uriBuilder.Uri);
+				messageQueueItem.Delivered(httpResponseMessage);
 				//todo add logging
 			}
 			catch (Exception e)
 			{
-				Console.WriteLine(e);
-				throw;
+				//todo add logging
+				messageQueueItem.NotDelivered();
 			}
 		}
 	}

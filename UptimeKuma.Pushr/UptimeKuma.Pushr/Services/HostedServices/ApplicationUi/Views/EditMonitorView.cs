@@ -1,4 +1,5 @@
 ﻿using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
+using UptimeKuma.Pushr.Services.HostedServices.TaskRunner;
 using UptimeKuma.Pushr.Services.MonitorStore;
 using UptimeKuma.Pushr.Services.TaskStore;
 using UptimeKuma.Pushr.TaskRunner;
@@ -11,15 +12,20 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views
 		private readonly IReportableMonitor _monitor;
 		private readonly ITaskStoreService _taskStoreService;
 		private readonly IMonitorStoreService _monitorStoreService;
+		private readonly ITaskRunnerNotifyService _taskRunnerNotifyService;
 
 		public EditMonitorView(MonitorData monitorData,
 			ITaskStoreService taskStoreService,
-			IMonitorStoreService monitorStoreService)
+			IMonitorStoreService monitorStoreService,
+			ITaskRunnerNotifyService taskRunnerNotifyService)
 		{
 			_monitorData = monitorData;
 			_taskStoreService = taskStoreService;
 			_monitorStoreService = monitorStoreService;
-			_monitor = _monitorStoreService.GetTasks().First(e => e.Id == monitorData.ReportableMonitorId);
+			_taskRunnerNotifyService = taskRunnerNotifyService;
+			_monitor = _monitorStoreService
+				.GetTasks()
+				.First(e => e.Id == monitorData.ReportableMonitorId);
 
 			SetupTitle();
 
@@ -50,6 +56,16 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views
 		{
 			SetupTitle();
 			viewRenderer.AppendLine(Title);
+
+			var state = _taskRunnerNotifyService.States.FirstOrDefault(f => f.Data.Id == _monitorData.Id).LastState;
+			viewRenderer
+				.Append("State: ")
+				.AppendLine(MainView.BuildStateDisplay(state?.State ?? MonitorState.Unknown));
+			if (state?.BrokenInfoText != null)
+			{
+				viewRenderer.Append("Last error: ")
+					.AppendLine($"<error>{state.BrokenInfoText}</error>");
+			}
 			_uiActionsList = new ListView()
 			{
 				Title = "Actions",

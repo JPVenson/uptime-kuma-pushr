@@ -55,7 +55,9 @@ public class PingMonitor : PullMonitorBase
 		};
 	}
 
-	public override async ValueTask<IStatusMessage> PullStatusAsync(MonitorData options, CancellationToken cancellationToken)
+	public override async ValueTask<IStatusMessage> PullStatusAsync(MonitorData options,
+		CancellationToken cancellationToken,
+		StateInfo state)
 	{
 		var hostname = options.Data[HOSTNAME_OPTION_KEY];
 		var randomPayloadGenerated = options.Data[RANDOM_PAYLOAD_OPTION_KEY];
