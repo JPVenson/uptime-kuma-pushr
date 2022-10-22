@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using ServiceLocator.Attributes;
 using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views;
+using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
 using UptimeKuma.Pushr.Services.TaskRunnerNotify;
 using UptimeKuma.Pushr.Services.TaskStore.Options;
 

@@ -1,4 +1,5 @@
 ﻿using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views;
+using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
 using UptimeKuma.Pushr.TaskRunner.UiOptions;
 
 namespace UptimeKuma.Pushr.Services.TaskStore;

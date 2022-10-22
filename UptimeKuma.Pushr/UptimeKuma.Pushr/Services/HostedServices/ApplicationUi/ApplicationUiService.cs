@@ -17,6 +17,7 @@ public class ApplicationUiService : BackgroundService
 	{
 		var uiThread = new Thread(RunUiLoop);
 		uiThread.IsBackground = false;
+		uiThread.Name = "UiDispatcher";
 		uiThread.Start();
 		return Task.CompletedTask;
 	}

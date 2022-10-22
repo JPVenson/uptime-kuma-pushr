@@ -2,6 +2,7 @@
 using System.Text;
 using ServiceLocator.Attributes;
 using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views;
+using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
 using UptimeKuma.Pushr.TaskRunner;
 
 namespace UptimeKuma.Pushr.Monitors.KumaProxy.Http;

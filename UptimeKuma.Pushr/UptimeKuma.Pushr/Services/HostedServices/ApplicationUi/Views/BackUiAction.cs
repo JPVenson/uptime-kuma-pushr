@@ -1,4 +1,6 @@
-﻿namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views;
+﻿using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
+
+namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views;
 
 public class BackUiAction : UiAction
 {

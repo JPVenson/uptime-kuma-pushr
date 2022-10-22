@@ -47,6 +47,7 @@ public class TaskRunnerService : BackgroundService
 
 		var runnerThread = new Thread(RunTaskQueue);
 		runnerThread.IsBackground = false;
+		runnerThread.Name = "Kuma.TaskRunner";
 		runnerThread.Start();
 	}
 

@@ -1,7 +1,4 @@
-﻿using System.Security.Cryptography;
-using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
-
-namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views;
+﻿namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
 
 public class InputPromtView : ViewBase
 {

@@ -21,6 +21,7 @@ public class KumaPushClientService : BackgroundService
 	{
 		var pushThread = new Thread(RunPushQueue);
 		pushThread.IsBackground = true;
+		pushThread.Name = "Kuma.PushQueue";
 		pushThread.Start();
 		return Task.CompletedTask;
 	}

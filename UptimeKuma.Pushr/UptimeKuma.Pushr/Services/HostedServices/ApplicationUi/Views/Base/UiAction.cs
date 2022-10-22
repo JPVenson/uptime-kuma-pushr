@@ -1,6 +1,4 @@
-﻿using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
-
-namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views;
+﻿namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
 
 public abstract class UiAction : ViewBase
 {

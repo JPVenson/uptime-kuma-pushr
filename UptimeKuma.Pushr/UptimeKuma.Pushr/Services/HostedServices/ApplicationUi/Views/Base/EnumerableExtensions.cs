@@ -1,6 +1,6 @@
 ﻿using UptimeKuma.Pushr.TaskRunner.UiOptions;
 
-namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views;
+namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
 
 public static class EnumerableExtensions
 {
