@@ -1,6 +1,6 @@
 ﻿using UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views.Base;
-using UptimeKuma.Pushr.Services.HostedServices.TaskRunner;
 using UptimeKuma.Pushr.Services.MonitorStore;
+using UptimeKuma.Pushr.Services.TaskRunnerNotify;
 using UptimeKuma.Pushr.Services.TaskStore;
 using UptimeKuma.Pushr.TaskRunner;
 

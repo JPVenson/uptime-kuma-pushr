@@ -1,6 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.Web;
 using Microsoft.Extensions.Hosting;
+using UptimeKuma.Pushr.Services.PushQueue;
 
 namespace UptimeKuma.Pushr.Services.HostedServices.StatusClient;
 

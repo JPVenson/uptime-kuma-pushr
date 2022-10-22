@@ -2,7 +2,7 @@
 using UptimeKuma.Pushr.Services.TaskStore;
 using UptimeKuma.Pushr.TaskRunner;
 
-namespace UptimeKuma.Pushr.Services.HostedServices.TaskRunner;
+namespace UptimeKuma.Pushr.Services.TaskRunnerNotify;
 
 [SingletonService(typeof(ITaskRunnerNotifyService))]
 public class TaskRunnerNotifyService : ITaskRunnerNotifyService

@@ -6,13 +6,12 @@ public abstract class PushMonitorBase : MonitorBase, IPushMonitor
 {
 	protected PushMonitorBase(string id, string name, string description) : base(id, name, description)
 	{
+
 	}
 
 	public abstract ValueTask<IPushMonitorItem> GetMonitoringItem(MonitorData options,
 		CancellationToken cancellationToken,
 		PushState setState);
-
-	public IList<IPushMonitorItem> PushMonitorItems { get; set; }
 
 	public async ValueTask<object> StartPushState(MonitorData options,
 		CancellationToken cancellationToken,
@@ -26,7 +25,6 @@ public abstract class PushMonitorBase : MonitorBase, IPushMonitor
 	public async ValueTask StopPushState(object state)
 	{
 		var pushMonitorItem = (IPushMonitorItem)state;
-		PushMonitorItems.Remove(pushMonitorItem);
 		await pushMonitorItem.Stop();
 	}
 }

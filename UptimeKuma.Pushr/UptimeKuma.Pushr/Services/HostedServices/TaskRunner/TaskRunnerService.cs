@@ -2,9 +2,10 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using UptimeKuma.Pushr.Services.HostedServices.StatusClient;
 using UptimeKuma.Pushr.Services.HostedServices.TaskRunner.Options;
 using UptimeKuma.Pushr.Services.MonitorStore;
+using UptimeKuma.Pushr.Services.PushQueue;
+using UptimeKuma.Pushr.Services.TaskRunnerNotify;
 using UptimeKuma.Pushr.Services.TaskStore;
 using UptimeKuma.Pushr.TaskRunner;
 using UptimeKuma.Pushr.Util;
@@ -105,8 +106,12 @@ public class TaskRunnerService : BackgroundService
 	private async Task RefreshHostRunData()
 	{
 		_runnerNotifyService.RefreshSignal();
-		foreach (var monitorData in _taskStoreService.Tasks
-			         .Where(e => !_hostRunData.Select(f => f.Data.Id).Contains(e.Id)))
+		foreach (var monitorData in _taskStoreService
+			         .Tasks
+			         .Where(e => !_hostRunData
+				         .Select(f => f.Data.Id)
+				         .Contains(e.Id))
+			         .Where(e => !e.Disabled))
 		{
 			var monitor = _monitorStoreService
 				.GetTasks()
@@ -131,7 +136,10 @@ public class TaskRunnerService : BackgroundService
 		}
 
 		foreach (var monitorData in _hostRunData
-			         .Where(e => !_taskStoreService.Tasks.Select(f => f.Id).Contains(e.Data.Id)).ToArray())
+			         .Where(e => !_taskStoreService
+				         .Tasks
+						 .Select(f => f.Id).Contains(e.Data.Id) || e.Data.Disabled)
+			         .ToArray())
 		{
 			_hostRunData.Remove(monitorData);
 

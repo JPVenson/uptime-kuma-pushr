@@ -1,9 +1,10 @@
 ﻿using System.Collections.Concurrent;
 using ServiceLocator.Attributes;
+using UptimeKuma.Pushr.Services.HostedServices.StatusClient;
 using UptimeKuma.Pushr.Services.TaskStore;
 using UptimeKuma.Pushr.TaskRunner;
 
-namespace UptimeKuma.Pushr.Services.HostedServices.StatusClient;
+namespace UptimeKuma.Pushr.Services.PushQueue;
 
 [SingletonService(typeof(IPushQueueService))]
 public class PushQueueService : IPushQueueService
