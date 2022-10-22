@@ -150,10 +150,13 @@ namespace UptimeKuma.Pushr.Services.HostedServices.ApplicationUi.Views
 				}
 
 				var mainViewAction = _mainViewActions.SelectFrom(_uiActions, inputSelection.Result);
-				if (mainViewAction is not null && mainViewAction is not BackUiAction)
+				if (mainViewAction is not null)
 				{
 					await mainViewAction.Display(false);
-					await base.Display(embedded);
+					if (mainViewAction is not BackUiAction)
+					{
+						await base.Display(embedded);
+					}
 				}
 			}
 

@@ -53,6 +53,8 @@ public class PushProxyMonitorHttpServerService : IPushProxyMonitorHttpServerServ
 						State = MonitorState.Broken
 					});
 				}
+
+				return;
 			}
 
 
