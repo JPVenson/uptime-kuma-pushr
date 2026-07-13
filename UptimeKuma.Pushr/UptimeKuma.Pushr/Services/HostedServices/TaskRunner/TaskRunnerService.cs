@@ -60,11 +60,12 @@ public class TaskRunnerService : BackgroundService
 			if (nextExecution.TotalSeconds > 0)
 			{
 				//wait for the amount or the signal to refresh
-				var waitAny = Task.WaitAny(
+				var waitAny = Task.WaitAny([
 					Task.Delay(nextExecution),
-					_runnerNotifyService.RefreshDataEvent.Await()
+					_runnerNotifyService.RefreshDataEvent.Await()],
+					_hostApplicationLifetime.ApplicationStopping
 					);
-				if (waitAny == 1)//indicates the refresh monitor was completed and a monitor list refresh should be invoked
+				if (waitAny is 1)//indicates the refresh monitor was completed and a monitor list refresh should be invoked
 				{
 					continue;
 				}

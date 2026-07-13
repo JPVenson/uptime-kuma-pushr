@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Threading.Channels;
 using ServiceLocator.Attributes;
 using UptimeKuma.Pushr.Services.HostedServices.StatusClient;
 using UptimeKuma.Pushr.Services.TaskStore;
@@ -11,26 +12,21 @@ public class PushQueueService : IPushQueueService
 {
 	public PushQueueService()
 	{
-		MessageQueue = new BlockingCollection<MessageQueueItem>();
+		MessageQueue = Channel.CreateUnbounded<MessageQueueItem>();
 	}
 
-	public BlockingCollection<MessageQueueItem> MessageQueue { get; }
+	public Channel<MessageQueueItem> MessageQueue { get; }
 
 	public void EnqueueMessage(IStatusMessage message, IReportableMonitor monitor, MonitorData monitorData)
 	{
-		MessageQueue.Add(new MessageQueueItem(message, monitor, monitorData));
+		MessageQueue.Writer.TryWrite(new MessageQueueItem(message, monitor, monitorData));
 	}
 
 	public Task<HttpResponseMessage> EnqueueMessageAsync(IStatusMessage message, IReportableMonitor monitor,
 		MonitorData monitorData)
 	{
 		var messageQueueItem = new MessageQueueItem(message, monitor, monitorData);
-		MessageQueue.Add(messageQueueItem);
+		MessageQueue.Writer.TryWrite(messageQueueItem);
 		return messageQueueItem.AwaitDelivery();
-	}
-
-	public IEnumerable<MessageQueueItem> GetConsumableEnumerable()
-	{
-		return MessageQueue.GetConsumingEnumerable();
 	}
 }

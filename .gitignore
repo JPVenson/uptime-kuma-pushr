@@ -275,3 +275,6 @@ __pycache__/
 !*/pdfium_x64.dll
 /OCKarat.NextGen.Server.Customer/OcKarat
 /OCKarat_82/OCKarat_82.Datalayer/T4/DataServiceInterfaceTemplate.cs
+UptimeKuma.Pushr/tasks.json
+.devcontainer/devcontainer-lock.json
+tasks.json

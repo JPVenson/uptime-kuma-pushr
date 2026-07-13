@@ -1,0 +1,282 @@
+﻿@page "/"
+@using System.Net.Http.Json
+@inject HttpClient Http
+@implements IDisposable
+
+<PageTitle>Kuma Pushr</PageTitle>
+
+<div class="app">
+    <header>
+        <h1>Kuma Pushr</h1>
+        @if (!showForm)
+        {
+            <button class="btn-primary" @onclick="StartAdd">+ Add Monitor</button>
+        }
+    </header>
+
+    @if (errorMsg != null)
+    {
+        <div class="error-banner">
+            @errorMsg
+            <button class="btn-close" @onclick='() => errorMsg = null'>×</button>
+        </div>
+    }
+
+    @if (showForm)
+    {
+        <div class="form-card">
+            <h2>@(editingId == null ? "Add Monitor" : $"Edit: {editingTitle}")</h2>
+
+            @if (editingId == null)
+            {
+                <div class="field">
+                    <label>Monitor Type</label>
+                    <select @bind="selectedTypeId" @bind:after="OnTypeSelected">
+                        <option value="">— select type —</option>
+                        @foreach (var t in SupportedTypes)
+                        {
+                            <option value="@t.Id">@t.Name — @t.Description</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            @foreach (var opt in formOptions)
+            {
+                <div class="field">
+                    <label>
+                        @opt.Name
+                        @if (opt.Required) { <span class="required">*</span> }
+                    </label>
+                    @if (opt.Type == "bool")
+                    {
+                        <select @bind="formValues[opt.Key]">
+                            <option value="y">Yes</option>
+                            <option value="n">No</option>
+                        </select>
+                    }
+                    else if (opt.Type == "list" && opt.SuggestedValues != null && opt.SuggestedValues.Count > 0)
+                    {
+                        <select @bind="formValues[opt.Key]">
+                            @foreach (var kv in opt.SuggestedValues)
+                            {
+                                <option value="@kv.Key">@kv.Value</option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <input type="@InputTypeFor(opt.Type)"
+                               placeholder="@opt.Description"
+                               @bind="formValues[opt.Key]" />
+                    }
+                    @if (!string.IsNullOrEmpty(opt.Description) && opt.Type != "bool"
+                         && (opt.SuggestedValues == null || opt.SuggestedValues.Count == 0))
+                    {
+                        <small>@opt.Description</small>
+                    }
+                </div>
+            }
+
+            <div class="form-actions">
+                @if (formOptions.Count > 0)
+                {
+                    <button class="btn-primary" @onclick="SaveForm" disabled="@saving">
+                        @(saving ? "Saving…" : "Save")
+                    </button>
+                }
+                <button class="btn-ghost" @onclick="CancelForm">Cancel</button>
+            </div>
+        </div>
+    }
+
+    @if (tasks == null)
+    {
+        <p class="loading">Loading monitors…</p>
+    }
+    else if (tasks.Count == 0)
+    {
+        <p class="empty">No monitors configured yet.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Interval</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var task in tasks)
+                {
+                    <tr class="@(task.Disabled ? "row-disabled" : "")">
+                        <td>@task.Title</td>
+                        <td>@task.MonitorTypeName</td>
+                        <td>@task.IntervalSeconds s</td>
+                        <td>
+                            <span class="badge badge-@task.State.ToLower()">@task.State</span>
+                            @if (!string.IsNullOrEmpty(task.BrokenInfoText))
+                            {
+                                <span class="error-hint" title="@task.BrokenInfoText">⚠</span>
+                            }
+                        </td>
+                        <td class="actions">
+                            <button class="btn-sm" @onclick="() => StartEdit(task)">Edit</button>
+                            <button class="btn-sm" @onclick="() => ToggleTask(task)">
+                                @(task.Disabled ? "Enable" : "Disable")
+                            </button>
+                            <button class="btn-sm btn-danger" @onclick="() => DeleteTask(task)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    List<MonitorType>? monitorTypes;
+    List<MonitorTask>? tasks;
+    bool showForm;
+    string? editingId;
+    string? editingTitle;
+    string selectedTypeId = "";
+    List<MonitorOption> formOptions = new();
+    Dictionary<string, string> formValues = new();
+    bool saving;
+    string? errorMsg;
+    System.Threading.Timer? _timer;
+
+    IEnumerable<MonitorType> SupportedTypes =>
+        monitorTypes?.Where(t => t.IsSupported) ?? Enumerable.Empty<MonitorType>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAll();
+        _timer = new System.Threading.Timer(_ => InvokeAsync(RefreshTasks), null, 5000, 5000);
+    }
+
+    async Task LoadAll()
+    {
+        monitorTypes = await Http.GetFromJsonAsync<List<MonitorType>>("/api/monitor-types");
+        await RefreshTasks();
+    }
+
+    async Task RefreshTasks()
+    {
+        tasks = await Http.GetFromJsonAsync<List<MonitorTask>>("/api/tasks");
+        StateHasChanged();
+    }
+
+    void StartAdd()
+    {
+        editingId = null;
+        editingTitle = null;
+        selectedTypeId = "";
+        formOptions = new();
+        formValues = new();
+        showForm = true;
+    }
+
+    void OnTypeSelected()
+    {
+        var type = monitorTypes?.FirstOrDefault(t => t.Id == selectedTypeId);
+        formOptions = type?.Options ?? new();
+        formValues = formOptions.ToDictionary(o => o.Key, o => o.DefaultValue ?? "");
+    }
+
+    void StartEdit(MonitorTask task)
+    {
+        editingId = task.Id;
+        editingTitle = task.Title;
+        selectedTypeId = task.MonitorTypeId;
+        var type = monitorTypes?.FirstOrDefault(t => t.Id == task.MonitorTypeId);
+        formOptions = type?.Options ?? new();
+        formValues = formOptions.ToDictionary(
+            o => o.Key,
+            o => task.Fields.TryGetValue(o.Key, out var v) ? v : (o.DefaultValue ?? ""));
+        showForm = true;
+    }
+
+    void CancelForm()
+    {
+        showForm = false;
+        errorMsg = null;
+    }
+
+    async Task SaveForm()
+    {
+        if (editingId == null && string.IsNullOrEmpty(selectedTypeId)) return;
+        saving = true;
+        errorMsg = null;
+        try
+        {
+            var monitorTypeId = editingId == null
+                ? selectedTypeId
+                : tasks!.First(t => t.Id == editingId).MonitorTypeId;
+
+            var req = new { monitorTypeId, fields = formValues };
+            System.Net.Http.HttpResponseMessage response;
+            if (editingId == null)
+                response = await Http.PostAsJsonAsync("/api/tasks", req);
+            else
+                response = await Http.PutAsJsonAsync($"/api/tasks/{editingId}", req);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMsg = $"Error {response.StatusCode}: {await response.Content.ReadAsStringAsync()}";
+                return;
+            }
+            showForm = false;
+            await RefreshTasks();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.Message;
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    async Task ToggleTask(MonitorTask task)
+    {
+        await Http.PostAsync($"/api/tasks/{task.Id}/toggle", null);
+        await RefreshTasks();
+    }
+
+    async Task DeleteTask(MonitorTask task)
+    {
+        await Http.DeleteAsync($"/api/tasks/{task.Id}");
+        await RefreshTasks();
+    }
+
+    static string InputTypeFor(string type) => type switch
+    {
+        "number" => "number",
+        "url" => "url",
+        _ => "text"
+    };
+
+    public void Dispose() => _timer?.Dispose();
+
+    // ---- local model records (mirror server API shape) ----
+    record MonitorOption(
+        string Key, string Name, string? Description, string Type,
+        string? DefaultValue, bool Required, Dictionary<string, string>? SuggestedValues);
+
+    record MonitorType(
+        string Id, string Name, string? Description, bool IsSupported,
+        string? NotSupportedReason, List<MonitorOption> Options);
+
+    record MonitorTask(
+        string Id, string Title, string MonitorTypeId, string MonitorTypeName,
+        int IntervalSeconds, string PushUrl, bool Disabled,
+        string State, string? BrokenInfoText, Dictionary<string, string> Fields);
+}
+

@@ -1,0 +1,17 @@
+{
+    "configurations": [        
+        {
+            "name": "Launch and Debug Hosted Blazor WebAssembly App",
+            // "type": "blazorwasm",
+            "type": "coreclr",
+            "request": "launch",            
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/UptimeKuma.Pushr/UptimeKuma.Pushr/bin/Debug/net10.0/UptimeKuma.Pushr.dll",
+            // "cwd": "${workspaceFolder}/UptimeKuma.Pushr",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_HTTP_PORTS": "8080"
+            }
+        },
+    ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "uptime-kuma-pushr",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:dev-10.0",
+  "features": {
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "version": "10.0"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:4.0.0": {
+      "dockerDashComposeVersion": "v2"
+    },
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.vscode-dotnet-runtime"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "UptimeKuma.Pushr/UptimeKuma.Pushr.sln"
+      }
+    }
+  },
+  "postCreateCommand": "sudo chown -R vscode:vscode /workspaces/ && dotnet restore UptimeKuma.Pushr/UptimeKuma.Pushr.sln && dotnet dev-certs https",
+  "remoteUser": "vscode"
+}

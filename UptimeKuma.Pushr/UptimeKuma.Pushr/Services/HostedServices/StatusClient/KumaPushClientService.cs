@@ -28,7 +28,7 @@ public class KumaPushClientService : BackgroundService
 
 	private async void RunPushQueue(object obj)
 	{
-		foreach (var messageQueueItem in _pushQueueService.GetConsumableEnumerable())
+		await foreach (var messageQueueItem in _pushQueueService.MessageQueue.Reader.ReadAllAsync())
 		{
 			var client = EnsureHttpClient(messageQueueItem.MonitorData.PushUrl, out var uri);
 
@@ -47,6 +47,7 @@ public class KumaPushClientService : BackgroundService
 			try
 			{
 				var httpResponseMessage = await client.GetAsync(uriBuilder.Uri);
+				httpResponseMessage.EnsureSuccessStatusCode();
 				messageQueueItem.Delivered(httpResponseMessage);
 				//todo add logging
 			}
