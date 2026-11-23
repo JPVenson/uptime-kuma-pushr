@@ -71,7 +71,8 @@ app.MapGet("/api/tasks", (ITaskStoreService ts, IMonitorStoreService ms, ITaskRu
             disabled = t.Disabled,
             state = state.ToString(),
             brokenInfoText = brokenInfo,
-            fields
+            fields,
+            due = stateEntry.Value.LastExecutionDate
         };
     })
 );

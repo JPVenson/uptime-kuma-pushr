@@ -36,7 +36,7 @@ public class TaskRunnerService : BackgroundService
 		_runnerNotifyService = runnerNotifyService;
 
 		_hostRunData = new List<HostRunModel>();
-		_runnerNotifyService.States = _hostRunData.Select(f => (f.Data, f.LastState));
+		_runnerNotifyService.States = _hostRunData.Select(f => (f.Data, f.LastState, f.LastExecution));
 	}
 
 	private List<HostRunModel> _hostRunData;
@@ -78,10 +78,12 @@ public class TaskRunnerService : BackgroundService
 				{
 					value.LastExecution = DateTime.Now;
 					statusMessage = await InvokeTask(value);
+					value.LastState.State = MonitorState.Running;
 				}
 				catch (Exception e)
 				{
 					statusMessage = FailedStatusMessage.Create(value.Monitor, e, _taskRunnerOptions);
+					value.LastState.State = MonitorState.Broken;
 				}
 
 				_pushQueueService.EnqueueMessage(statusMessage, value.Monitor, value.Data);

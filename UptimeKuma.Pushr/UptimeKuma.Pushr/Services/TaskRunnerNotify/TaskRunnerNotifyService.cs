@@ -14,7 +14,7 @@ public class TaskRunnerNotifyService : ITaskRunnerNotifyService
 	}
 
 	public AutoResetEvent RefreshDataEvent { get; private set; }
-	public IEnumerable<(MonitorData Data, StateInfo LastState)> States { get; set; }
+	public IEnumerable<(MonitorData Data, StateInfo LastState, DateTime? LastExecutionDate)> States { get; set; }
 
 
 	public event EventHandler<MonitorData> StateHasChanged;

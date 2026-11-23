@@ -106,6 +106,7 @@
                     <th>Name</th>
                     <th>Type</th>
                     <th>Interval</th>
+                    <th>Next Invocation</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -117,6 +118,10 @@
                         <td>@task.Title</td>
                         <td>@task.MonitorTypeName</td>
                         <td>@task.IntervalSeconds s</td>
+                        @{
+                            var nextDueSec = DateTime.Now - task.Due?.AddSeconds(task.IntervalSeconds);
+                        }
+                        <td>@(nextDueSec.HasValue && nextDueSec.Value > TimeSpan.Zero ? "+" : "")@(nextDueSec?.ToString("ss") ?? "?") s</td>
                         <td>
                             <span class="badge badge-@task.State.ToLower()">@task.State</span>
                             @if (!string.IsNullOrEmpty(task.BrokenInfoText))
@@ -149,7 +154,8 @@
     Dictionary<string, string> formValues = new();
     bool saving;
     string? errorMsg;
-    System.Threading.Timer? _timer;
+    System.Threading.Timer? _refreshTaskTimer;
+    System.Threading.Timer? _refreshUiTimer;
 
     IEnumerable<MonitorType> SupportedTypes =>
         monitorTypes?.Where(t => t.IsSupported) ?? Enumerable.Empty<MonitorType>();
@@ -157,7 +163,8 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadAll();
-        _timer = new System.Threading.Timer(_ => InvokeAsync(RefreshTasks), null, 5000, 5000);
+        _refreshTaskTimer = new System.Threading.Timer(_ => InvokeAsync(RefreshTasks), null, 5000, 5000);
+        _refreshUiTimer = new Timer(_ => InvokeAsync(StateHasChanged), null, 1000, 1000);
     }
 
     async Task LoadAll()
@@ -263,7 +270,7 @@
         _ => "text"
     };
 
-    public void Dispose() => _timer?.Dispose();
+    public void Dispose() => _refreshTaskTimer?.Dispose();
 
     // ---- local model records (mirror server API shape) ----
     record MonitorOption(
@@ -277,6 +284,6 @@
     record MonitorTask(
         string Id, string Title, string MonitorTypeId, string MonitorTypeName,
         int IntervalSeconds, string PushUrl, bool Disabled,
-        string State, string? BrokenInfoText, Dictionary<string, string> Fields);
+        string State, string? BrokenInfoText, Dictionary<string, string> Fields, DateTime? Due);
 }
 

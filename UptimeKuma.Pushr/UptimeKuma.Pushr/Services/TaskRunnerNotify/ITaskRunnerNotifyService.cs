@@ -6,7 +6,7 @@ namespace UptimeKuma.Pushr.Services.TaskRunnerNotify;
 public interface ITaskRunnerNotifyService
 {
 	AutoResetEvent RefreshDataEvent { get; }
-	IEnumerable<(MonitorData Data, StateInfo LastState)> States { get; set; }
+	IEnumerable<(MonitorData Data, StateInfo LastState, DateTime? LastExecutionDate)> States { get; set; }
 
 	event EventHandler<MonitorData> StateHasChanged;
 
