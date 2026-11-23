@@ -27,108 +27,112 @@ builder.Services
 var app = builder.Build();
 app.MapStaticAssets();
 
-// GET /api/monitor-types  — list available monitor types
-app.MapGet("/api/monitor-types", (IMonitorStoreService ms) =>
-    ms.GetTasks().Select(m => new
-    {
-        id = m.Id,
-        name = m.Name,
-        description = m.Description,
-        isSupported = m.IsSupported,
-        notSupportedReason = m.NotSupportedReason,
-        options = m.GetOptionsTemplate().Select(o => new
+if (builder.Configuration.GetValue<bool>("PUSHR_ENABLE_UI") == true)
+{
+    // GET /api/monitor-types  — list available monitor types
+    app.MapGet("/api/monitor-types", (IMonitorStoreService ms) =>
+        ms.GetTasks().Select(m => new
         {
-            key = o.Key,
-            name = o.Name,
-            description = o.Description,
-            type = OptionType(o),
-            defaultValue = o.Default,
-            required = o.Required,
-            suggestedValues = o.SuggestedValues ?? new Dictionary<string, string>()
+            id = m.Id,
+            name = m.Name,
+            description = m.Description,
+            isSupported = m.IsSupported,
+            notSupportedReason = m.NotSupportedReason,
+            options = m.GetOptionsTemplate().Select(o => new
+            {
+                key = o.Key,
+                name = o.Name,
+                description = o.Description,
+                type = OptionType(o),
+                defaultValue = o.Default,
+                required = o.Required,
+                suggestedValues = o.SuggestedValues ?? new Dictionary<string, string>()
+            })
         })
-    })
-);
+    );
 
-// GET /api/tasks  — list tasks with current runtime state
-app.MapGet("/api/tasks", (ITaskStoreService ts, IMonitorStoreService ms, ITaskRunnerNotifyService ns) =>
-    ts.Tasks.Select(t =>
-    {
-        var monitor = ms.FindTask(t.ReportableMonitorId);
-        var stateEntry = ns.States?.FirstOrDefault(s => s.Data.Id == t.Id);
-        var state = stateEntry?.LastState?.State ?? MonitorState.Unknown;
-        var brokenInfo = stateEntry?.LastState?.BrokenInfoText;
-        var opts = monitor?.GetOptionsTemplate().ToList() ?? new();
-        if (t.Data != null) t.PopulateUiOptions(opts);
-        var fields = opts.ToDictionary(o => o.Key, o => o.Value ?? "");
-        return new
+    // GET /api/tasks  — list tasks with current runtime state
+    app.MapGet("/api/tasks", (ITaskStoreService ts, IMonitorStoreService ms, ITaskRunnerNotifyService ns) =>
+        ts.Tasks.Select(t =>
         {
-            id = t.Id,
-            title = t.Title,
-            monitorTypeId = t.ReportableMonitorId,
-            monitorTypeName = monitor?.Name ?? "Unknown",
-            intervalSeconds = (int)t.Interval.TotalSeconds,
-            pushUrl = t.PushUrl,
-            disabled = t.Disabled,
-            state = state.ToString(),
-            brokenInfoText = brokenInfo,
-            fields,
-            due = stateEntry.Value.LastExecutionDate
-        };
-    })
-);
+            var monitor = ms.FindTask(t.ReportableMonitorId);
+            var stateEntry = ns.States?.FirstOrDefault(s => s.Data.Id == t.Id);
+            var state = stateEntry?.LastState?.State ?? MonitorState.Unknown;
+            var brokenInfo = stateEntry?.LastState?.BrokenInfoText;
+            var opts = monitor?.GetOptionsTemplate().ToList() ?? new();
+            if (t.Data != null) t.PopulateUiOptions(opts);
+            var fields = opts.ToDictionary(o => o.Key, o => o.Value ?? "");
+            return new
+            {
+                id = t.Id,
+                title = t.Title,
+                monitorTypeId = t.ReportableMonitorId,
+                monitorTypeName = monitor?.Name ?? "Unknown",
+                intervalSeconds = (int)t.Interval.TotalSeconds,
+                pushUrl = t.PushUrl,
+                disabled = t.Disabled,
+                state = state.ToString(),
+                brokenInfoText = brokenInfo,
+                fields,
+                due = stateEntry.Value.LastExecutionDate
+            };
+        })
+    );
 
-// POST /api/tasks  — create a new task
-app.MapPost("/api/tasks", async (CreateUpdateTaskRequest req, ITaskStoreService ts, IMonitorStoreService ms) =>
-{
-    var monitor = ms.FindTask(req.MonitorTypeId);
-    if (monitor is null) return Results.NotFound();
+    // POST /api/tasks  — create a new task
+    app.MapPost("/api/tasks", async (CreateUpdateTaskRequest req, ITaskStoreService ts, IMonitorStoreService ms) =>
+    {
+        var monitor = ms.FindTask(req.MonitorTypeId);
+        if (monitor is null) return Results.NotFound();
 
-    var opts = monitor.GetOptionsTemplate().ToList();
-    foreach (var opt in opts)
-        if (req.Fields.TryGetValue(opt.Key, out var val)) opt.Value = val;
+        var opts = monitor.GetOptionsTemplate().ToList();
+        foreach (var opt in opts)
+            if (req.Fields.TryGetValue(opt.Key, out var val)) opt.Value = val;
 
-    var task = new MonitorData { Id = Guid.NewGuid().ToString("D"), ReportableMonitorId = req.MonitorTypeId };
-    task.InfuseUiOptions(opts);
-    await ts.AddTask(task);
-    return Results.Ok();
-});
+        var task = new MonitorData { Id = Guid.NewGuid().ToString("D"), ReportableMonitorId = req.MonitorTypeId };
+        task.InfuseUiOptions(opts);
+        await ts.AddTask(task);
+        return Results.Ok();
+    });
 
-// PUT /api/tasks/{id}  — update an existing task
-app.MapPut("/api/tasks/{id}", async (string id, CreateUpdateTaskRequest req, ITaskStoreService ts, IMonitorStoreService ms) =>
-{
-    var existing = ts.Tasks.FirstOrDefault(t => t.Id == id);
-    if (existing is null) return Results.NotFound();
-    var monitor = ms.FindTask(existing.ReportableMonitorId);
-    if (monitor is null) return Results.NotFound();
+    // PUT /api/tasks/{id}  — update an existing task
+    app.MapPut("/api/tasks/{id}", async (string id, CreateUpdateTaskRequest req, ITaskStoreService ts, IMonitorStoreService ms) =>
+    {
+        var existing = ts.Tasks.FirstOrDefault(t => t.Id == id);
+        if (existing is null) return Results.NotFound();
+        var monitor = ms.FindTask(existing.ReportableMonitorId);
+        if (monitor is null) return Results.NotFound();
 
-    var opts = monitor.GetOptionsTemplate().ToList();
-    foreach (var opt in opts)
-        if (req.Fields.TryGetValue(opt.Key, out var val)) opt.Value = val;
+        var opts = monitor.GetOptionsTemplate().ToList();
+        foreach (var opt in opts)
+            if (req.Fields.TryGetValue(opt.Key, out var val)) opt.Value = val;
 
-    existing.InfuseUiOptions(opts);
-    await ts.UpdateTask(existing);
-    return Results.Ok();
-});
+        existing.InfuseUiOptions(opts);
+        await ts.UpdateTask(existing);
+        return Results.Ok();
+    });
 
-// DELETE /api/tasks/{id}
-app.MapDelete("/api/tasks/{id}", async (string id, ITaskStoreService ts) =>
-{
-    if (!ts.Tasks.Any(t => t.Id == id)) return Results.NotFound();
-    await ts.RemoveTask(id);
-    return Results.NoContent();
-});
+    // DELETE /api/tasks/{id}
+    app.MapDelete("/api/tasks/{id}", async (string id, ITaskStoreService ts) =>
+    {
+        if (!ts.Tasks.Any(t => t.Id == id)) return Results.NotFound();
+        await ts.RemoveTask(id);
+        return Results.NoContent();
+    });
 
-// POST /api/tasks/{id}/toggle  — flip disabled flag
-app.MapPost("/api/tasks/{id}/toggle", async (string id, ITaskStoreService ts) =>
-{
-    var existing = ts.Tasks.FirstOrDefault(t => t.Id == id);
-    if (existing is null) return Results.NotFound();
-    existing.Disabled = !existing.Disabled;
-    await ts.UpdateTask(existing);
-    return Results.Ok(new { disabled = existing.Disabled });
-});
+    // POST /api/tasks/{id}/toggle  — flip disabled flag
+    app.MapPost("/api/tasks/{id}/toggle", async (string id, ITaskStoreService ts) =>
+    {
+        var existing = ts.Tasks.FirstOrDefault(t => t.Id == id);
+        if (existing is null) return Results.NotFound();
+        existing.Disabled = !existing.Disabled;
+        await ts.UpdateTask(existing);
+        return Results.Ok(new { disabled = existing.Disabled });
+    });
 
-app.MapFallbackToFile("index.html");
+    app.MapFallbackToFile("index.html");
+}
+
 await app.RunAsync();
 
 // ---- helpers ----
